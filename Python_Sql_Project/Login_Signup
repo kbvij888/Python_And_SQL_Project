@@ -1,0 +1,113 @@
+import sqlite3
+import re
+
+# ---------------------------
+# Database Setup
+# ---------------------------
+
+conn = sqlite3.connect("users.db")
+cur = conn.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+)
+""")
+conn.commit()
+
+
+# ---------------------------
+# Email Validation
+# ---------------------------
+
+def is_valid_email(email):
+    return email.endswith("@gmail.com")
+
+
+# ---------------------------
+# Strong Password Validation
+# Minimum 8 chars, letters + numbers
+# ---------------------------
+
+def is_strong_password(password):
+    if len(password) < 8:
+        return False
+    has_letter = re.search(r"[A-Za-z]", password)
+    has_number = re.search(r"\d", password)
+    return bool(has_letter and has_number)
+
+
+# ---------------------------
+# Signup Function
+# ---------------------------
+
+def signup():
+    print("\n--- SIGNUP ---")
+    name = input("Enter your name: ").strip()
+    email = input("Enter your email (@gmail.com only): ").strip()
+
+    if not is_valid_email(email):
+        print("Invalid email. Only @gmail.com emails allowed.")
+        return
+
+    password = input("Enter password (min 8 chars, letters + numbers): ").strip()
+
+    if not is_strong_password(password):
+        print("Weak password. Use minimum 8 characters with letters and numbers.")
+        return
+
+    try:
+        cur.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+                    (name, email, password))
+        conn.commit()
+        print("Signup successful!")
+    except sqlite3.IntegrityError:
+        print("Email already exists. Try another.")
+
+
+# ---------------------------
+# Login Function
+# ---------------------------
+
+def login():
+    print("\n--- LOGIN ---")
+    email = input("Enter email: ").strip()
+    password = input("Enter password: ").strip()
+
+    cur.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
+    user = cur.fetchone()
+
+    if user:
+        print(f"Welcome, {user[1]}! Login successful.")
+    else:
+        print("Incorrect email or password.")
+
+
+# ---------------------------
+# Main Menu
+# ---------------------------
+
+def main():
+    while True:
+        print("\n1. Signup")
+        print("2. Login")
+        print("3. Exit")
+        choice = input("Choose option: ")
+
+        if choice == "1":
+            signup()
+        elif choice == "2":
+            login()
+        elif choice == "3":
+            print("Exiting...")
+            break
+        else:
+            print("Invalid choice. Try again.")
+
+main()
+
+# Close DB connection on exit
+conn.close()
